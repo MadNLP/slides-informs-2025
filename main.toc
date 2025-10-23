@@ -1,8 +1,0 @@
-\beamer@sectionintoc {1}{Motivation}{3}{0}{1}
-\beamer@sectionintoc {2}{Problem Setting: NLPs}{5}{0}{2}
-\beamer@sectionintoc {3}{Software Structure}{7}{0}{3}
-\beamer@sectionintoc {4}{Pivoting \& Inertia}{9}{0}{4}
-\beamer@sectionintoc {5}{Option 1: Lifted KKT}{12}{0}{5}
-\beamer@sectionintoc {6}{Option 2: Hybrid KKT}{15}{0}{6}
-\beamer@sectionintoc {7}{Beyond IPM KKT}{16}{0}{7}
-\beamer@sectionintoc {8}{Conclusion}{17}{0}{8}
