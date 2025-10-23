@@ -1,0 +1,33 @@
+@misc{montoisonGPUImplementationSecondOrder2025,
+  title = {{{GPU Implementation}} of {{Second-Order Linear}} and {{Nonlinear Programming Solvers}}},
+  author = {Montoison, Alexis and Pacaud, Fran{\c c}ois and Shin, Sungho and Anitescu, Mihai},
+  year = 2025,
+  month = aug,
+  number = {arXiv:2508.16094},
+  eprint = {2508.16094},
+  primaryclass = {math},
+  publisher = {arXiv},
+  doi = {10.48550/arXiv.2508.16094},
+  urldate = {2025-10-22},
+  abstract = {In recent years, GPU-accelerated optimization solvers based on second-order methods (e.g., interior-point methods) have gained momentum with the advent of mature and efficient GPU-accelerated direct sparse linear solvers, such as cuDSS. This paper provides an overview of the state of the art in GPU-based second-order solvers, focusing on pivoting-free interior-point methods for large and sparse linear and nonlinear programs. We begin by highlighting the capabilities and limitations of the currently available GPU-accelerated sparse linear solvers. Next, we discuss different formulations of the Karush-Kuhn-Tucker systems for second-order methods and evaluate their suitability for pivoting-free GPU implementations. We also discuss strategies for computing sparse Jacobians and Hessians on GPUs for nonlinear programming. Finally, we present numerical experiments demonstrating the scalability of GPU-based optimization solvers. We observe speedups often exceeding 10x compared to comparable CPU implementations on large-scale instances when solved up to medium precision. Additionally, we examine the current limitations of existing approaches.},
+  archiveprefix = {arXiv},
+  keywords = {Mathematics - Optimization and Control},
+  file = {/Users/sushin/Zotero/storage/FV5VFMBW/Montoison et al. - 2025 - GPU Implementation of Second-Order Linear and Nonlinear Programming Solvers.pdf}
+}
+
+@misc{montoisonMadNCLGPUImplementation2025,
+  title = {{{MadNCL}}: {{A GPU Implementation}} of {{Algorithm NCL}} for {{Large-Scale}}, {{Degenerate Nonlinear Programs}}},
+  shorttitle = {{{MadNCL}}},
+  author = {Montoison, Alexis and Pacaud, Fran{\c c}ois and Saunders, Michael and Shin, Sungho and Orban, Dominique},
+  year = 2025,
+  month = oct,
+  number = {arXiv:2510.05885},
+  eprint = {2510.05885},
+  primaryclass = {math},
+  publisher = {arXiv},
+  doi = {10.48550/arXiv.2510.05885},
+  urldate = {2025-10-08},
+  abstract = {We present a GPU implementation of Algorithm NCL, an augmented Lagrangian method for solving large-scale and degenerate nonlinear programs. Although interior-point methods and sequential quadratic programming are widely used for solving nonlinear programs, the augmented Lagrangian method is known to offer superior robustness against constraint degeneracies and can rapidly detect infeasibility. We introduce several enhancements to Algorithm NCL, including fusion of the inner and outer loops and use of extrapolation steps, which improve both efficiency and convergence stability. Further, NCL has the key advantage of being well-suited for GPU architectures because of the regularity of the KKT systems provided by quadratic penalty terms. In particular, the NCL subproblem formulation allows the KKT systems to be naturally expressed as either stabilized or condensed KKT systems, whereas the interior-point approach requires aggressive reformulations or relaxations to make it suitable for GPUs. Both systems can be efficiently solved on GPUs using sparse {\textbackslash}ldlt factorization with static pivoting, as implemented in NVIDIA cuDSS. Building on these advantages, we examine the KKT systems arising from NCL subproblems. We present an optimized GPU implementation of Algorithm NCL by leveraging MadNLP as an interior-point subproblem solver and utilizing the stabilized and condensed formulations of the KKT systems for computing Newton steps. Numerical experiments on various large-scale and degenerate NLPs, including optimal power flow, COPS benchmarks, and security-constrained optimal power flow, demonstrate that MadNCL operates efficiently on GPUs while effectively managing problem degeneracy, including MPCC constraints.},
+  archiveprefix = {arXiv},
+  keywords = {Mathematics - Optimization and Control}
+}
