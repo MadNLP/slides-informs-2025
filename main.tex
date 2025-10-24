@@ -1,4 +1,5 @@
 \documentclass[aspectratio=169,11pt]{beamer}
+\usepackage[dvipsnames]{xcolor}
 \usepackage{tikz}
 \usepackage{mathtools}
 \usepackage{lmodern}      % replaces Computer Modern with Latin Modern
@@ -45,13 +46,13 @@
 % --- Blocks ---
 \setbeamertemplate{blocks}[rounded][shadow=false]  % or shadow=true for dropshadow
 % Normal block: neutral title, neutral body
-\setbeamercolor{block title}{fg=black,bg=mitorange!20}
+\setbeamercolor{block title}{fg=mitred,bg=mitorange!20}
 \setbeamercolor{block body}{fg=mitdarkgray,bg=mitorange!20}
 % Alert block: MIT red title; body neutral
-\setbeamercolor{block title alerted}{fg=black,bg=mitred!20}
+\setbeamercolor{block title alerted}{fg=mitred,bg=mitred!20}
 \setbeamercolor{block body alerted}{fg=mitdarkgray,bg=mitred!20}
 % Example block: cool accent for contrast
-\setbeamercolor{block title example}{fg=black,bg=mitdarkgray!20}
+\setbeamercolor{block title example}{fg=mitred,bg=mitdarkgray!20}
 \setbeamercolor{block body example}{fg=mitdarkgray,bg=mitdarkgray!20}
 
 % --- Emphasis & inline alerts ---
@@ -82,16 +83,19 @@
 % \setbeamertemplate{footline}[frame number]
 \setbeamertemplate{navigation symbols}{}
 
-\setbeamertemplate{footline}{
+\setbeamertemplate{footline}{%
   \leavevmode%
-  \hfill%
   \usebeamerfont{footline}
   \usebeamercolor[fg]{footline}
-  \tiny Sungho Shin--- \href{mailto:sushin@mit.edu}{sushin@mit.edu}\; 
-  \insertframenumber/\inserttotalframenumber
-  \kern1em%
-  \vskip3pt
+  \tiny
+  \tikz[remember picture, overlay,xscale=0.875,transform shape]{
+    \node[anchor=south] at (current page.south) {\insertshorttitle};
+    \node[anchor=south west] at (current page.south west) {Sungho Shin--- \href{mailto:sushin@mit.edu}{sushin@mit.edu}};
+    \node[anchor=south east] at (current page.south east) {\insertframenumber/\inserttotalframenumber};
+  }  
 }
+
+
 
 % \setbeamertemplate{footline}{%
 %   \leavevmode%
@@ -119,6 +123,8 @@
 \AtEveryCitekey{\clearfield{volume}}
 \AtEveryCitekey{\clearfield{number}}
 \AtEveryCitekey{\clearfield{primaryclass}}
+\DeclareNameAlias{default}{labelname}
+\renewbibmacro{in:}{}
 
 
 % % Only print family name(s), but allow et al. when truncated
@@ -133,21 +139,22 @@
 
 
 \newcommand{\refbr}[2][]{%
-  \begin{tikzpicture}[remember picture, overlay,inner sep=3pt,xscale=0.9,transform shape]  
-    \node[anchor=south west,align=left,font=\tiny,color=mitdarkgray,text width=1.15\linewidth,yshift=8pt] at (current page.south west) {#1 #2};
+  \begin{tikzpicture}[remember picture, overlay,xscale=0.875,transform shape,inner sep=2pt]
+    \node[anchor=south west,align=left,font=\tiny,color=mitdarkgray,text width=1.2\linewidth,yshift=10pt] at (current page.south west) {#1 #2};
   \end{tikzpicture}%
 }
 
 \newcommand{\joint}[2][]{% 
-  \begin{tikzpicture}[remember picture, overlay, inner sep = 3pt,xscale=0.9,transform shape]
-    \node[anchor=south west,align=left,font=\tiny,color=mitdarkgray] at (current page.south west) {#1 #2};  
+  \begin{tikzpicture}[remember picture, overlay, xscale=0.875,transform shape,inner sep=2pt]
+    \node[anchor=south west,align=left,font=\tiny,color=mitdarkgray] at (current page.south west) {#1 #2};
+    \node[anchor=south east,align=left,font=\tiny,color=mitdarkgray] at (current page.south east) {\insertframenumber/\inserttotalframenumber};  
   \end{tikzpicture}%
 }
 
 \graphicspath{{figs/}}
 
 \title[Nonlinear Optimization on GPUs]{Solving Large-Scale, Sparse, Constrained Nonlinear Optimization Problems on GPUs}
-\subtitle{Pivoting-Free Interior Point Methods}
+\subtitle{Pivoting-Free Interior-Point Methods}
 \author{
   Sungho Shin\\
   \url{shin.mit.edu}
@@ -168,8 +175,10 @@
     François Pacaud (MINES-Paris),
     Mihai Anitescu (Argonne)
   }
+  \thispagestyle{empty}
 } % Title page
 
+\setbeamertemplate{footline}[content]
 \begin{frame}{Who are we?}
   \begin{center}
     \url{https://madsuite.org/}\\[.25in]    
@@ -193,24 +202,24 @@
 \begin{frame}{GPU-based optimization}
   \begin{itemize}
   \item What is GPU? ---many-core accelerator with high memory bandwidth
-  \item Traditionally used for graphics, now widely used for ML/AI workloads
-  \item Classical optimization (mathematical program; not ML training problems) has been thought to be \alert{unsuitable} for GPUs
-  \item Many state-of-the-art solvers (on CPUs) rely on \alert{sparse direct factorizations}, which has been considered \alert{difficult} to implement efficiently on GPUs
-  \item This status quo is changing---the focus of this talk
+  \item<2-> Traditionally used for graphics, now widely used for ML/AI workloads
+  \item<3-> Classical optimization (mathematical programming; not ML training) has been considered \alert{unsuitable} for GPUs
+  \item<4-> Many state-of-the-art solvers on CPUs rely on \alert{sparse direct factorizations}, which are viewed as \alert{difficult} to implement efficiently on GPUs
+  \item<5-> This status quo is changing---the focus of this talk 
   \end{itemize}
 \end{frame}
 
 \begin{frame}{GPU-based optimization: current landscape}
   \begin{itemize}
-  \item \alert{Factoriation-free methods} have been the dominant approach
+  \item \alert{Factorization-free methods} have been the dominant approach:
     \begin{itemize}
-    \item PDLP: Primal-dual first-order methods \citep{applegatePracticalLargeScaleLinear2022,luCuPDLPFurtherEnhanced2025}
+    \item PDLP: first-order method for LPs \citep{applegatePracticalLargeScaleLinear2022,luCuPDLPFurtherEnhanced2025}
     \item {PCG}-based algorithms for convex QPs \citep{schubigerGPUAccelerationADMM2020}
     \item ALM + IPM + PCG for nonlinear problems \citep{caoAugmentedLagrangianInteriorpoint2016}
     \end{itemize}
-  \item Factoriztion-free methods only rely on \alert{GPU-friendly kernels}---\alert{\texttt{spmv}, \texttt{axpy}, \texttt{map}, \texttt{mapreduce}}---makes them easy to implement on GPUs
-  \item Scale to extremely large problems \alert{but achieving high precision is difficult}
-  \item Can we implement \alert{second-order methods} with \alert{sparse direct solvers} on GPUs?
+  \item<2-> These methods rely solely on \alert{GPU-friendly kernels}---\alert{\texttt{spmv}, \texttt{axpy}, \texttt{map}, \texttt{mapreduce}}---facilitating implementation on GPUs
+  \item<3-> They scale to extremely large problems, but achieving high precision remains challenging
+  \item<4-> Is it possible to implement \alert{second-order methods} using \alert{sparse direct solvers} on GPUs?
   \end{itemize}
   \refbr{
     \fullcite{applegatePracticalLargeScaleLinear2022}\\
@@ -225,29 +234,29 @@
 % ---------------------------
 \begin{frame}{Our problem setting}{Large-scale, sparse, constrained nonlinear programs}
   \begin{itemize}
-  \item \only<1>{
+  \item \only<1-4>{
       We consider:
       \begin{align*}
         \min_{x^\flat\leq x \leq x^\sharp}&\; f(x) \\
         \text{s.t.}&\; g^\flat\leq g(x)\leq g^\sharp,
       \end{align*}
     }
-    \only<2>{
+    \only<5->{
       WLOG (via $a=b \iff a \geq b,\; b\geq a$), we consider:
       \begin{align*}
         \min_{x\in\mathbb{R}^n}&\; f(x) \\
         \text{s.t.}&\; g(x)\geq 0,
       \end{align*}
     }
-    ... but will particularly focus on:
+    \visible<2->... but will particularly focus on:
     \begin{itemize}
-    \item $f:\mathbb{R}^n\to\mathbb{R}$ and $g:\mathbb{R}^n\to\mathbb{R}^m$ twice continuously differentiable
-    \item $n$ and $m$ are large (millions or more)
-    \item $\nabla g(x)$ and $\nabla^2_{xx} L(x,\lambda)$ are \alert{sparse} (tens of nonzeros per row)---$L(\cdot,\cdot)$ is the Lagrangian
+    \item<2-> $f:\mathbb{R}^n\to\mathbb{R}$ and $g:\mathbb{R}^n\to\mathbb{R}^m$ twice continuously differentiable
+    \item<3-> $n$ and $m$ are large (millions or more)
+    \item<4-> $\nabla g(x)$ and $\nabla^2_{xx} L(x,\lambda)$ are \alert{sparse} (tens of nonzeros per row)---$L(\cdot,\cdot)$ is the Lagrangian
     \end{itemize}
-  \item Generally \alert{nonconvex}---we only seek \alert{local solutions}
-  \item Most important instances (e.g., energy systems, optimal control) fall into this category
-  \item Most existing solvers (e.g., Ipopt, KNITRO) are optimized for such problems
+  \item<6-> Generally \alert{nonconvex}---we only seek \alert{local solutions}
+  \item<7-> Most important instances (e.g., energy systems, optimal control) fall into this category
+  \item<8-> Most existing solvers (e.g., Ipopt, KNITRO) are optimized for such problems
   \end{itemize}
 \end{frame}
 
@@ -278,16 +287,11 @@
 }
 \begin{frame}{NLP software stack---either on CPUs or GPUs}{{(1) algebraic modeling system}, {(2) NLP solver}, and {(3) sparse, direct linear solver}}
   \begin{itemize}
-  \item \alert{Algebraic modeling systems} (e.g., JuMP, AMPL, CasADi) generate \alert{callback functions---$f(\cdot)$, $g(\cdot)$, $\nabla f(\cdot)$, $\nabla g(\cdot)$, $\nabla^2_{xx} L(\cdot,\cdot)$}---for \alert{NLP solvers}
-  \item \alert{NLP solvers} (e.g., Ipopt, KNITRO) form \alert{KKT systems} to find step direction:
+  \item<2-> \alert{Algebraic modeling systems} (e.g., JuMP, AMPL, CasADi) generate \alert{callback functions---$f(\cdot)$, $g(\cdot)$, $\nabla f(\cdot)$, $\nabla g(\cdot)$, $\nabla^2_{xx} L(\cdot,\cdot)$}---for \alert{NLP solvers}
+  \item<3-> \alert{NLP solvers} (e.g., Ipopt, KNITRO) form \alert{KKT systems} to find step direction:
   \kktsystem
-    where $s$ is the slack variable, $S=\text{diag}(s)$, $\Lambda=\text{diag}(\lambda)$, and $\delta_p,\delta_d\geq 0$ are primal-dual regularization parameters
-  \item \alert{Sparse, direct linear solvers} (e.g., MA27, PARDISO) factorize and solve KKT systems; iterative method is typically not an option due to ill-conditioning
-  % \item \alert{All on GPUs}: modeling, AD, and linear algebra
-  % \item With sparse AD on GPUs, \textbf{derivative evaluation cost fades}
-  % \item \textbf{Main challenge}: parallel solution of \textbf{KKT systems}
-  % \item Other components (line search, barrier updates, heuristics, inertia correction) are not serial bottlenecks
-  % \item \textbf{Focus today}: nonlinear solver + numerical linear algebra
+    where $s$ is slack; $S=\text{diag}(s)$; $\Lambda=\text{diag}(\lambda)$; and $\delta_p,\delta_d$ are regularization parameters
+  \item<4-> \alert{Sparse, direct linear solvers} (e.g., MA27, PARDISO) factorize and solve KKT systems; iterative method is typically not an option due to \alert{ill-conditioning}
   \end{itemize}
 \end{frame}
 
@@ -295,12 +299,15 @@
 \begin{frame}{Full NLP software stack on GPU---is it possible?}{{(1) algebraic modeling system}, {(2) NLP solver}, and {(3) sparse, direct linear solver}}
   \begin{itemize}
   \item Partially porting on GPU (e.g., AD or linear algebra only) is not sufficient---will be bottlenecked by CPU--GPU communication. We need \alert{all three components on GPU}
-  \item Porting \alert{algebraic modeling system} is relatively straightforward. ExaModels.jl provides GPU-compatible modeling capabilities \citep{shinAcceleratingOptimalPower2024}---not the focus today
-  \item Porting \alert{direct linear solver} is more non-trivial; as of now, \alert{there is no drop-in replacement of MA27 on GPUs}
+  \item<2-> Porting \alert{algebraic modeling system} is relatively straightforward. ExaModels.jl provides GPU-compatible modeling capabilities \citep{shinAcceleratingOptimalPower2024}---not the focus today
+  \item<3-> Porting \alert{direct linear solver} is non-trivial; \alert{there is no drop-in replacement for MA27}
   \end{itemize}
-  \begin{block}{Our approach}
-    \alert{Adapt interior-point method for NLPs} so that it can work with \alert{GPU direct linear solvers} with (relatively) limited capabilities
-  \end{block}
+  \medskip
+  \visible<4->{
+    \begin{block}{Our approach}
+      {Adapt interior-point method (IPM) for NLPs} so that it can utilize {GPU direct linear solvers}
+    \end{block}
+  }
   \refbr{
     \fullcite{shinAcceleratingOptimalPower2024}
   }
@@ -309,25 +316,25 @@
 \section{Pivoting \& Inertia}
 % ---------------------------
 
-\begin{frame}{Sparse direct solvers within interior-point methods}
-  \begin{alertblock}{LBL$^\top$ factorization}
+\begin{frame}{Linear algebra within IPM (on CPUs)}
+  \begin{block}{LBL$^\top$ factorization}
     \vspace{-1em}
     \begin{align*}
       \begin{bmatrix}
-        \nabla^2_{x x} L(x,s,\lambda) + \delta_p I & & \nabla g(x)^\top
+        \nabla^2_{x x} L(x,s,\lambda) + {\color{magenta}\delta_p I} & & \nabla g(x)^\top
         \\ & S^{-1}\Lambda &  -I
-        \\ \nabla g(x) & -I &  - \delta_d I
+        \\ \nabla g(x) & -I &  - {\color{magenta}\delta_d I}
       \end{bmatrix}
       =
-      P\times Q\times L\times B\times L^\top\times  Q^\top\times  P^\top
+      {\color{blue}P}\times {\color{red}Q}\times {\color{ForestGreen}L\times B\times L^\top}\times  {\color{red}Q}^\top\times  {\color{blue}P}^\top
     \end{align*}
-  \end{alertblock}
+  \end{block}
   \begin{itemize}
-  \item $P$: Fill-in-reducing (and parallel-friendly) re-ordering (re-used across IPM iterations)
-  \item $Q$: Pivoting (computed on-the-fly during factorization)
-  \item $LBL^\top$: Factorization of permuted matrix
-  \item Additionally, pivots may be \alert{perturbed}, which must be corrected via \alert{iterative refinement}
-  \item Factorization reveals inertia---number of $+$, $0$, and $-$ eigenvalues; primal-dual regularization $(\delta_p,\delta_d)$ is adjusted to achieve correct inertia \citep{wachterImplementationInteriorpointFilter2006}; this can be merged with pivot perturbation \citep{nocedalNumericalOptimization2006}
+  \item<2-> ${\color{blue}P}$: Fill-in-reducing (and parallel-friendly) re-ordering (re-used across IPM iterations)
+  \item<3-> ${\color{red}Q}$: Pivoting (computed on-the-fly during factorization) \visible<7>{\alert{$\longleftarrow$ this is the pain point}}
+  \item<4-> ${\color{ForestGreen}LBL^\top}$: Factorization of permuted matrix
+  \item<5-> Additionally, pivots may be \alert{perturbed}, which must be corrected via \alert{iterative refinement}
+  \item<6-> \alert{Factorization reveals inertia}---number of $+$, $0$, and $-$ eigenvalues; {primal-dual regularization {\color{magenta}$(\delta_p,\delta_d)$} is adjusted} to achieve correct inertia \citep{wachterImplementationInteriorpointFilter2006}
   \end{itemize}
   \refbr{
     \fullcite{wachterImplementationInteriorpointFilter2006}\\
@@ -337,39 +344,37 @@
 
 \begin{frame}{Pivoting-free IPM}{\cite{montoisonGPUImplementationSecondOrder2025}}
   \begin{itemize}
-  \item Numerical pivoting is \alert{difficult} to implement on GPUs \citep{swirydowiczLinearSolversPower2022} because row swapping can potentially \alert{destroy parallelism}
-  \item Existing GPU solvers (e.g., cuDSS) \alert{don't have adequately robust pivoting strategies}; currently only have partial pivoting and pivot perturbation \citep{nvidiaNVIDIACuDSSPreview}
-  \item Factorization may fail without \alert{numerical pivoting}, unless
+  \item Numerical pivoting is \alert{difficult} to implement on GPUs \citep{swirydowiczLinearSolversPower2022} because row swapping may \alert{affect fill-ins} and \alert{destroy parallelism}
+  \item<2-> Existing GPU solvers (e.g., cuDSS) \alert{don't have adequately robust pivoting strategies}; currently only have partial pivoting and pivot perturbation
+  \item<3-> Factorization may fail without \alert{numerical pivoting}, unless
     \begin{itemize}
     \item \alert{Symmetric quasi-definite} (SQD): factorization exists \citep{vanderbeiSymmetricQuasidefiniteMatrices1995} 
     \item \alert{Symmetric positive definite} (SPD): factorization exists and numerically stable
     \end{itemize}
-    However, \alert{KKT systems for NLPs are generally indefinite}
-  \item When pivoting is not required, \alert{GPU sparse direct solvers can be very efficient}
+  % \item When pivoting is not required, \alert{GPU sparse direct solvers can be very efficient}
   \end{itemize}
   \begin{center}
     \it
-    \only<1>{\alert{Can we make IPM pivoting-free?}}
-    \only<2>{(For now) can we reformulate KKT systems to be SPD or SQD?}
+    \only<4>{\alert{Can we make IPM pivoting-free?}}
+    \only<5->{(For now) can we reformulate KKT systems to be SPD or SQD?}
   \end{center}
   \refbr{
     \fullcite{montoisonGPUImplementationSecondOrder2025}\\
     \fullcite{vanderbeiSymmetricQuasidefiniteMatrices1995}\\
-    \fullcite{swirydowiczLinearSolversPower2022}\\
-    \fullcite{nvidiaNVIDIACuDSSPreview}
+    \fullcite{swirydowiczLinearSolversPower2022}
   }
 \end{frame}
 
 % ---------------------------
 \section{Option 1: Lifted KKT}
 % ---------------------------
-\begin{frame}{Option 1: Lifted KKT system}{\cite{shinAcceleratingOptimalPower2024}}
+\begin{frame}{Option 1: Lifted KKT method}{\cite{shinAcceleratingOptimalPower2024}}
 \begin{itemize}
-\item First, relax equalities by small enough $\tau$  (the same as solver tolerances):
+\item First, \alert{lift and relax equalities with small enough $\tau$} (the same as solver tolerances):
   \begin{align*}
-    -\tau\leq h(x)\leq  \tau
+    h(x)=0\quad \Longrightarrow \quad h(x) + s = 0 \quad\text{ and }\quad -\tau \leq s \leq\tau
   \end{align*}
-\item \alert{Condense} the KKT system by eliminating slack/dual variables:
+\item<2-> \alert{Condense} the KKT system by eliminating slack/dual variables:
   \begin{align*}
     &\begin{bmatrix}
       \nabla^2_{x x} L(x,s,\lambda) + \delta_p I & & \nabla g(x)^\top
@@ -389,41 +394,42 @@
       \end{bmatrix}
     \\
     &\iff
-    \Big(\underbrace{\nabla^2_{xx} L(x,s,\lambda) + \delta_p I + \nabla g(x)^\top (\delta_d I + \Lambda^{-1} S)^{-1} \nabla g(x) }_{\text{\alert{SPD iff the original system has correct inertia}}}\Big) d_x = - r_p \; \\
-    &\phantom{\iff\;\;}\text{\color{mitdarkgray}(and some easy-to-solve equations)}
+    \Big(\underbrace{\nabla^2_{xx} L(x,s,\lambda) + \delta_p I + \nabla g(x)^\top (\delta_d I + \Lambda^{-1} S)^{-1} \nabla g(x) }_{\text{\alert{SPD iff the original system has correct inertia}}}\Big) d_x = - r_p 
   \end{align*}
-\item Enables numerically stable factorization \alert{without pivoting or excessive regularization}
+\item<3-> Enables numerically stable factorization \alert{without pivoting or excessive regularization}
 \end{itemize}
 \refbr{
   \fullcite{shinAcceleratingOptimalPower2024}
 }
 \end{frame} 
 
-\begin{frame}{Option 1: Lifted KKT---numerical results (AC OPF)}{\cite{montoisonGPUImplementationSecondOrder2025}}
+\begin{frame}{Option 1: Lifted KKT method---numerical results (AC OPF)}{\cite{montoisonGPUImplementationSecondOrder2025}}
   \begin{center}
     \scriptsize
-    \begin{tabular}{|c|c|c|cc|cc|cc|cc|}
+    \begin{tabular}{|c|c|cc|cc|cc|cc|}
       \hline
-      &\multirow{ 3}{*}{\bfseries Tol} & \multirow{ 3}{*}{\bfseries Solver} & \multicolumn{2}{c|}{\textbf{Small}}& \multicolumn{2}{c|}{\textbf{Medium}}& \multicolumn{2}{c|}{\textbf{Large}}& \multicolumn{2}{c|}{\multirow{2}{*}{\textbf{Total}}}\\
-      &&& \multicolumn{2}{c|}{nnz $<2^{18}$}& \multicolumn{2}{c|}{$2^{18}\leq$ nnz $<2^{20}$}& \multicolumn{2}{c|}{$2^{20}\leq$ nnz}&&\\
-      &&&  Solved & Time &  Solved & Time &  Solved & Time &  Solved & Time \\
+      \multirow{ 3}{*}{\bfseries Tol} & \multirow{ 3}{*}{\bfseries Solver} & \multicolumn{2}{c|}{\textbf{Small}}& \multicolumn{2}{c|}{\textbf{Medium}}& \multicolumn{2}{c|}{\textbf{Large}}& \multicolumn{2}{c|}{\multirow{2}{*}{\textbf{Total}}}\\
+      && \multicolumn{2}{c|}{nnz $<2^{18}$}& \multicolumn{2}{c|}{$2^{18}\leq$ nnz $<2^{20}$}& \multicolumn{2}{c|}{$2^{20}\leq$ nnz}&&\\
+      &&  Solved & Time &  Solved & Time &  Solved & Time &  Solved & Time \\
       \hline\hline
-      \multirow{4}{*}{\rotatebox{90}{\bfseries OPF}}&\multirow{2}{*}{$10^{-4}$} & MadNLP (GPU) & \textbf{31} & 0.4166 & \textbf{24} & \textbf{2.6380} & \textbf{11} & \textbf{3.7040} & \textbf{66} & \textbf{1.6979}  \\
-      && Ipopt (CPU)& \textbf{31} & 0.3970 & \textbf{24} & 5.0697 & 11 & 38.5053 & \textbf{66} & 5.3817  \\
-      \cline{2-11}
-      &\multirow{2}{*}{$10^{-8}$} & MadNLP (GPU) & 30 & 2.5037 & \textbf{24} & \textbf{4.6016} & 10 & \textbf{12.8040} & 64 & \textbf{4.6228}  \\
-      && Ipopt (CPU) & \textbf{31} & 0.5100 & \textbf{24} & 5.4292 & 11 & 37.7818 & \textbf{66} & 5.5541  \\
+      \multirow{2}{*}{$10^{-4}$} & MadNLP (GPU) & \textbf{31} & 0.4166 & \textbf{24} & \textbf{2.6380} & \textbf{11} & \textbf{3.7040} & \textbf{66} & \textbf{1.6979}  \\
+      & Ipopt (CPU)& \textbf{31} & 0.3970 & \textbf{24} & 5.0697 & 11 & 38.5053 & \textbf{66} & 5.3817  \\
       \hline
-    \end{tabular}
+      \multirow{2}{*}{$10^{-8}$} & MadNLP (GPU) & 30 & 2.5037 & \textbf{24} & \textbf{4.6016} & 10 & \textbf{12.8040} & 64 & \textbf{4.6228}  \\
+      & Ipopt (CPU) & \textbf{31} & 0.5100 & \textbf{24} & 5.4292 & 11 & 37.7818 & \textbf{66} & 5.5541  \\
+      \hline
+    \end{tabular} 
   \end{center}
-  \begin{itemize}
-  \item \alert{Benchamrk set}: AC optimal power flow \citep{babaeinejadsarookolaeePowerGridLibrary2021}
-  \item \alert{Hardware}: NVIDIA GV 100 GPU / Intel Xeon Gold 6130 CPU
-  \item \alert{Time}: reported as SGM10$:= \prod_{i=1}^n (t_i + 10))^{1/n} - 10$, max wall time 900s 
+  \begin{itemize}\small
+  \item \alert{Benchmark set}: AC optimal power flow \citep{babaeinejadsarookolaeePowerGridLibrary2021}
+  \item \alert{Hardware}: NVIDIA GV100 GPU / Intel Xeon Gold 6130 CPU
+  \item \alert{Time}: reported as SGM10$:= \prod_{i=1}^n (t_i + 10))^{1/n} - 10$ with max wall time 900s 
   \end{itemize}
-  \begin{block}{Observation}
-    GPU solver is most effective for large-scale problems for moderate accuracy ($10^{-4}$)
-  \end{block}
+  \visible<2->{
+    \begin{block}{Observation}
+      GPU solver is most effective for large instances solved up to moderate accuracy ($10^{-4}$)
+    \end{block}
+  }
   \refbr{
     \fullcite{montoisonGPUImplementationSecondOrder2025}\\
     \fullcite{babaeinejadsarookolaeePowerGridLibrary2021}
@@ -433,28 +439,30 @@
 \begin{frame}{Option 1: Lifted KKT---numerical results (COPS)}{\cite{montoisonGPUImplementationSecondOrder2025}}
   \begin{center}
     \scriptsize
-    \begin{tabular}{|c|c|c|cc|cc|cc|cc|}
+    \begin{tabular}{|c|c|cc|cc|cc|cc|}
       \hline
-      &\multirow{ 3}{*}{\bfseries Tol} & \multirow{ 3}{*}{\bfseries Solver} & \multicolumn{2}{c|}{\textbf{Small}}& \multicolumn{2}{c|}{\textbf{Medium}}& \multicolumn{2}{c|}{\textbf{Large}}& \multicolumn{2}{c|}{\multirow{2}{*}{\textbf{Total}}}\\
-      &&& \multicolumn{2}{c|}{nnz $<2^{18}$}& \multicolumn{2}{c|}{$2^{18}\leq$ nnz $<2^{20}$}& \multicolumn{2}{c|}{$2^{20}\leq$ nnz}&&\\
-      &&&  Solved & Time &  Solved & Time &  Solved & Time &  Solved & Time \\
+      \multirow{ 3}{*}{\bfseries Tol} & \multirow{ 3}{*}{\bfseries Solver} & \multicolumn{2}{c|}{\textbf{Small}}& \multicolumn{2}{c|}{\textbf{Medium}}& \multicolumn{2}{c|}{\textbf{Large}}& \multicolumn{2}{c|}{\multirow{2}{*}{\textbf{Total}}}\\
+      && \multicolumn{2}{c|}{nnz $<2^{18}$}& \multicolumn{2}{c|}{$2^{18}\leq$ nnz $<2^{20}$}& \multicolumn{2}{c|}{$2^{20}\leq$ nnz}&&\\
+      &&  Solved & Time &  Solved & Time &  Solved & Time &  Solved & Time \\
       \hline\hline
-      \multirow{4}{*}{\rotatebox{90}{\bfseries COPS}}&\multirow{2}{*}{$10^{-4}$} & MadNLP (GPU) & \textbf{13} & \textbf{0.8665} & \textbf{15} & \textbf{4.8665} & \textbf{16} & \textbf{3.8194} & \textbf{44} & \textbf{3.2314}  \\
-      && Ipopt (CPU) & \textbf{13} & 5.2315 & \textbf{15} & 15.9701 & 15 & 45.8411 & 43 & 19.2243  \\
-      \cline{2-11}
-      &\multirow{2}{*}{$10^{-8}$} & MadNLP (GPU) & \textbf{13} & \textbf{0.8575} & \textbf{16} & \textbf{1.5572} & \textbf{16} & \textbf{8.3549} & \textbf{45} & \textbf{3.3797}  \\
-      && Ipopt (CPU) & \textbf{13} & 5.9413 & \textbf{15} & 17.6758 & 15 & 40.8639 & 43 & 19.2999  \\
+      \multirow{2}{*}{$10^{-4}$} & MadNLP (GPU) & \textbf{13} & \textbf{0.8665} & \textbf{15} & \textbf{4.8665} & \textbf{16} & \textbf{3.8194} & \textbf{44} & \textbf{3.2314}  \\
+      & Ipopt (CPU) & \textbf{13} & 5.2315 & \textbf{15} & 15.9701 & 15 & 45.8411 & 43 & 19.2243  \\
+      \hline
+      \multirow{2}{*}{$10^{-8}$} & MadNLP (GPU) & \textbf{13} & \textbf{0.8575} & \textbf{16} & \textbf{1.5572} & \textbf{16} & \textbf{8.3549} & \textbf{45} & \textbf{3.3797}  \\
+      & Ipopt (CPU) & \textbf{13} & 5.9413 & \textbf{15} & 17.6758 & 15 & 40.8639 & 43 & 19.2999  \\ 
       \hline
     \end{tabular}
   \end{center}
-  \begin{itemize}
-    \item \alert{Benchamrk set}: COPS Benchmark \citep{dolanBenchmarkingOptimizationSoftware2001}
-    \item \alert{Hardware}: NVIDIA GV 100 GPU / Intel Xeon Gold 6130 CPU
-    \item \alert{Time}: reported as SGM10$:= \prod_{i=1}^n (t_i + 10))^{1/n} - 10$, max wall time 900s
+  \begin{itemize}\small
+  \item \alert{Benchmark set}: COPS Benchmark \citep{dolanBenchmarkingOptimizationSoftware2001}
+  \item \alert{Hardware}: NVIDIA GV100 GPU / Intel Xeon Gold 6130 CPU
+  \item \alert{Time}: reported as SGM10$:= \prod_{i=1}^n (t_i + 10))^{1/n} - 10$, max wall time 900s
   \end{itemize}
-  \begin{block}{Observation}
-    GPU solver is most effective for large-scale problems for moderate accuracy ($10^{-4}$)
-  \end{block}
+  \visible<2>{
+    \begin{block}{Observation}
+      GPU solver is most effective for large instances solved up to moderate accuracy ($10^{-4}$)
+    \end{block}
+  }
   \refbr{
     \fullcite{montoisonGPUImplementationSecondOrder2025}\\
     \fullcite{babaeinejadsarookolaeePowerGridLibrary2021}
@@ -496,7 +504,7 @@
           r_{\lambda}
         \end{bmatrix}
     \end{align*}
-    Then, the Schur complement can be solved with an iterative method (e.g., CG)
+  \item<2-> Then, the Schur complement can be solved with an iterative method (e.g., CG)
     \begin{align*}
       \Bigg(\underbrace{\nabla h(x)^\top \Big(\overbrace{K_{\text{cond}} + \delta_p I + \rho  \nabla h(x)^\top \nabla h(x)}^{\tikz[overlay]{\node {\scriptsize \alert{SPD for sufficiently large $\rho$ iff correct inertia}};}} \Big)^{-1} \nabla h(x)}_{\text{converges to } I \text{ as } \rho\rightarrow \infty}  + \delta_d I \Bigg) d_{\lambda} = r'_{\lambda} 
     \end{align*}
@@ -514,9 +522,9 @@
 \begin{frame}{Options 3, 4, 5, ...}
   \begin{itemize}
   \item There can be lots of other ways to implement pivoting-free solvers
-  \item \alert{MadIPM}: Solver for convex quadratic programs; uses regularization to avoid pivoting \citep{montoisonGPUImplementationSecondOrder2025}
-  \item \alert{MadNCL}: ALM-based algorithm---ALM is more \alert{GPU-friendly} due to the quadratic penalty term. Uses nonlinearly-constrained Lagrangian (NCL) formulation and applies condensation techniques \citep{montoisonMadNCLGPUImplementation2025}
-  \item Directly solving augmented systems without pivoting? ---currently under investigation
+  \item<2-> \alert{MadIPM}: Solver for convex quadratic programs; uses regularization to avoid pivoting \citep{montoisonGPUImplementationSecondOrder2025}
+  \item<3-> \alert{MadNCL}: ALM-based algorithm---ALM is more \alert{GPU-friendly} due to the quadratic penalty term. Uses nonlinearly-constrained Lagrangian (NCL) formulation and applies condensation techniques \citep{montoisonMadNCLGPUImplementation2025}
+  \item<4-> Directly solving augmented systems without pivoting? ---currently under investigation
   \end{itemize}
 \end{frame}
 
@@ -524,20 +532,22 @@
 \section{Conclusion}
 % ---------------------------
 \begin{frame}{Concluding remarks}
-  \begin{itemize}
-  \item It is an exciting time to develop optimization solvers!
-  \item Existing GPU solvers have focused on \alert{factorization-free} (e.g. first-order) methods, but
-    \begin{center}
-      \text{GPU optimization solver} $\supsetneq$ \text{Factorization-free solver}.
-    \end{center}
-  \item With \alert{GPU direct solvers}, \alert{second-order methods} on GPUs has now become possible
-  \item To harness these GPU direct solvers, we need \alert{pivoting-free algorithms}
-  \item We presented \alert{Lifted KKT} and \alert{Hybrid KKT}, but there can be many others
-  \end{itemize}
   \begin{center}
     Check out our project page!\\
     \url{https://madsuite.org/}
   \end{center}
+  \begin{itemize}
+  \item It is an exciting time to develop optimization solvers!
+  \item<2-> With \alert{GPU direct solvers}, \alert{second-order methods} on GPUs has now become possible
+  \item<3-> To harness these GPU direct solvers, we need \alert{pivoting-free algorithms}
+  \item<4-> Existing GPU solvers have focused on \alert{factorization-free} (e.g. first-order) methods, but
+      \begin{align*}
+        \text{GPU optimization solver}
+        &\supsetneq \text{Factorization-free solver}\\
+        &\visible<5->{\supset\text{Factorization-baesd, but \alert{pivoting-free} solvers}}
+      \end{align*}
+  \item<6-> We presented \alert{Lifted KKT} and \alert{Hybrid KKT}, but there can be many others
+  \end{itemize}
 \end{frame}
 
 \AtNextBibliography{\tiny}
@@ -547,6 +557,19 @@
     \node at (current page.center) {\printbibliography[heading=none]};
   }
 \end{frame}
+
+
+\begin{frame}{}
+  \titlepage
+  \joint{
+    Joint work with:
+    Alexis Montoison (Argonne),
+    François Pacaud (MINES-Paris),
+    Mihai Anitescu (Argonne)
+  }
+  \thispagestyle{empty}
+\end{frame}
+
 
 \end{document}
 
