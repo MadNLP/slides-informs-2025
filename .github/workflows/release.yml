@@ -1,0 +1,29 @@
+name: Rolling PDF Release
+on:
+  push:
+    branches: [ "main" ]
+
+permissions:
+  contents: write
+
+jobs:
+  build-and-release:
+    runs-on: self-hosted
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build PDF
+        run: |
+          make build
+          mv main.pdf pivot-free-ipm-informs-2025.pdf
+
+      - name: Publish rolling release
+        uses: ncipollo/release-action@v1
+        with:
+          tag: rolling
+          name: "Slides for 2025 INFORMS Annual Meeting (rolling release)"
+          artifacts: "pivot-free-ipm-informs-2025.pdf"
+          allowUpdates: true
+          removeArtifacts: true
+          makeLatest: true
+          token: ${{ secrets.GITHUB_TOKEN }}
