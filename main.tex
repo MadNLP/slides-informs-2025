@@ -2,8 +2,8 @@
 \usepackage[dvipsnames]{xcolor}
 \usepackage{tikz}
 \usepackage{mathtools}
-\usepackage{lmodern}      % replaces Computer Modern with Latin Modern
-\usepackage{inconsolata}
+% \usepackage{lmodern}      % replaces Computer Modern with Latin Modern
+% \usepackage{inconsolata}
 \usepackage{multirow}
 \usepackage[style=authoryear-comp,url=false,date=year,doi=false,isbn=false,eprint=true,maxnames=1,minnames=1,backend=biber,natbib=true]{biblatex}
 % ------------------------------------------------------------
@@ -90,7 +90,7 @@
   \tiny
   \tikz[remember picture, overlay,xscale=0.875,transform shape]{
     \node[anchor=south] at (current page.south) {\insertshorttitle};
-    \node[anchor=south west] at (current page.south west) {Sungho Shin--- \href{mailto:sushin@mit.edu}{sushin@mit.edu}};
+    \node[anchor=south west] at (current page.south west) {Sungho Shin--- \href{mailto:sushin@mit.edu}{\tt sushin@mit.edu}};
     \node[anchor=south east] at (current page.south east) {\insertframenumber/\inserttotalframenumber};
   }  
 }
@@ -123,6 +123,10 @@
 \AtEveryCitekey{\clearfield{volume}}
 \AtEveryCitekey{\clearfield{number}}
 \AtEveryCitekey{\clearfield{primaryclass}}
+\AtEveryCitekey{\clearfield{edition}}
+\AtEveryCitekey{\clearfield{publisher}}
+\AtEveryCitekey{\clearfield{series}}
+\AtEveryCitekey{\clearfield{address}}
 \DeclareNameAlias{default}{labelname}
 \renewbibmacro{in:}{}
 
@@ -153,7 +157,7 @@
 
 \graphicspath{{figs/}}
 
-\title[Nonlinear Optimization on GPUs]{Solving Large-Scale, Sparse, Constrained Nonlinear Optimization Problems on GPUs}
+\title[NLP on GPUs: Pivoting-Free IPM]{Solving Large-Scale, Sparse, Constrained Nonlinear Optimization Problems on GPUs}
 \subtitle{Pivoting-Free Interior-Point Methods}
 \author{
   Sungho Shin\\
@@ -331,7 +335,7 @@
   \end{block}
   \begin{itemize}
   \item<2-> ${\color{blue}P}$: Fill-in-reducing (and parallel-friendly) re-ordering (re-used across IPM iterations)
-  \item<3-> ${\color{red}Q}$: Pivoting (computed on-the-fly during factorization) \visible<7>{\alert{$\longleftarrow$ this is the pain point}}
+  \item<3-> ${\color{red}Q}$: Pivoting (computed on-the-fly during factorization) \visible<7>{\textcolor{red}{$\longleftarrow$ this is the main pain point}}
   \item<4-> ${\color{ForestGreen}LBL^\top}$: Factorization of permuted matrix
   \item<5-> Additionally, pivots may be \alert{perturbed}, which must be corrected via \alert{iterative refinement}
   \item<6-> \alert{Factorization reveals inertia}---number of $+$, $0$, and $-$ eigenvalues; {primal-dual regularization {\color{magenta}$(\delta_p,\delta_d)$} is adjusted} to achieve correct inertia \citep{wachterImplementationInteriorpointFilter2006}
@@ -368,6 +372,14 @@
 % ---------------------------
 \section{Option 1: Lifted KKT}
 % ---------------------------
+\begin{frame}{Option 0: Vanila IPM + CuDSS?}
+  \begin{itemize}
+  \item With MadNLP v0.8.12 + CuDSS v0.7.1, convergence is typically OK with small problems ($<10k$ variables), but \alert{fails frequently with larger problems} ($>10k$ variables)
+  \item Linear solver relies on \alert{pivot perturbation} $\Rightarrow$ poor factorization accuracy $\Rightarrow$ iterative refinement failure $\Rightarrow$ \alert{forced primal-dual regularization} $\Rightarrow$ \alert{slow convergence or failure}
+  \item As of now, this is \alert{not a viable option}
+  \end{itemize}
+\end{frame}
+
 \begin{frame}{Option 1: Lifted KKT method}{\cite{shinAcceleratingOptimalPower2024}}
 \begin{itemize}
 \item First, \alert{lift and relax equalities with small enough $\tau$} (the same as solver tolerances):
@@ -542,8 +554,8 @@
   \item<3-> To harness these GPU direct solvers, we need \alert{pivoting-free algorithms}
   \item<4-> Existing GPU solvers have focused on \alert{factorization-free} (e.g. first-order) methods, but
       \begin{align*}
-        \text{GPU optimization solver}
-        &\supsetneq \text{Factorization-free solver}\\
+        \text{GPU optimization solvers}
+        &\supsetneq \text{Factorization-free solvers}\\
         &\visible<5->{\supset\text{Factorization-baesd, but \alert{pivoting-free} solvers}}
       \end{align*}
   \item<6-> We presented \alert{Lifted KKT} and \alert{Hybrid KKT}, but there can be many others
@@ -575,6 +587,8 @@
 
 %%% Local Variables:
 %%% mode: LaTeX
+%%% TeX-master: t
+%%% TeX-master: t
 %%% TeX-master: t
 %%% End:
 
