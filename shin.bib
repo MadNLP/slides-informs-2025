@@ -2380,6 +2380,23 @@
   file = {/Users/sushin/Zotero/storage/4PQ8LALE/Duda - 2019 - Replacing hydropower with solar.pdf}
 }
 
+@article{duffAlgorithmsPermutingLarge2001,
+  title = {On {{Algorithms For Permuting Large Entries}} to the {{Diagonal}} of a {{Sparse Matrix}}},
+  author = {Duff, I. S. and Koster, J.},
+  year = 2001,
+  month = jan,
+  journal = {SIAM Journal on Matrix Analysis and Applications},
+  volume = {22},
+  number = {4},
+  pages = {973--996},
+  issn = {0895-4798, 1095-7162},
+  doi = {10.1137/S0895479899358443},
+  urldate = {2025-10-27},
+  abstract = {We consider bipartite matching algorithms for computing permutations of a sparse matrixso that the diagonal of the permuted matrixhas entries of large absolute value. We discuss various strategies for this and consider their implementation as computer codes. We also consider scaling techniques to further increase the relative values of the diagonal entries. Numerical experiments show the effect of the reorderings and the scaling on the solution of sparse equations by a direct method and by preconditioned iterative techniques.},
+  langid = {english},
+  file = {/Users/sushin/Zotero/storage/9QUQC8HK/Duff and Koster - 2001 - On Algorithms For Permuting Large Entries to the Diagonal of a Sparse Matrix.pdf}
+}
+
 @book{duffDirectMethodsSparse2017,
   title = {Direct {{Methods}} for {{Sparse Matrices}}},
   author = {Duff, I. S. and Erisman, A. M. and Reid, J. K.},
@@ -2407,6 +2424,22 @@
   urldate = {2025-07-16},
   abstract = {We introduce a new code for the direct solution of sparse symmetric linear equations that solves indefinite systems with 2 {\texttimes} 2 pivoting for stability. This code, called MA57, is in HSL 2002 and supersedes the well used HSL code MA27. We describe some of the implementation details and emphasize the novel features of MA57. These include restart facilities, matrix modification, partial solution for matrix factors, solution of multiple right-hand sides, and iterative refinement and error analysis. The code is written in Fortran 77, but there are additional facilities within a Fortran 90 implementation that include the ability to identify and change pivots. Several of these facilities have been developed particularly to support optimization applications, and we illustrate the performance of the code on problems arising therefrom.},
   file = {/Users/sushin/Zotero/storage/SX3FH97S/Duff - 2004 - MA57---a code for the solution of sparse symmetric definite and indefinite systems.pdf}
+}
+
+@article{duffMultifrontalSolutionIndefinite1983,
+  title = {The {{Multifrontal Solution}} of {{Indefinite Sparse Symmetric Linear}}},
+  author = {Duff, I. S. and Reid, J. K.},
+  year = 1983,
+  month = sep,
+  journal = {ACM Transactions on Mathematical Software},
+  volume = {9},
+  number = {3},
+  pages = {302--325},
+  issn = {0098-3500, 1557-7295},
+  doi = {10.1145/356044.356047},
+  urldate = {2025-10-27},
+  langid = {english},
+  file = {/Users/sushin/Zotero/storage/QESRFUKX/Duff and Reid - 1983 - The Multifrontal Solution of Indefinite Sparse Symmetric Linear.pdf}
 }
 
 @article{dunnElectricalEnergyStorage2011,
@@ -7719,7 +7752,7 @@ Subject\_term: Hydrology, Climate change, Environmental sciences, Policy},
   publisher = {PMLR},
   issn = {2640-3498},
   urldate = {2025-03-25},
-  abstract = {We consider the problem of online adaptive control of the linear quadratic regulator, where the true system parameters are unknown. We prove new upper and lower bounds demonstrating that the optimal regret scales as {\~undefined}({$d$}2{$\mathbf{u}d\mathbf{x}T$}------{\textsurd}){$\Theta$}{\textasciitilde}(du2dxT){\textbackslash}tilde\{{\textbackslash}Theta\} ({\textbackslash}sqrt\{d\_\{{\textbackslash}mathbf\{u\}\}{\textasciicircum}2 d\_\{{\textbackslash}mathbf\{x\}\} T\}), where {$T$}TT is the number of time steps, {$d\mathbf{u}$}dud\_\{{\textbackslash}mathbf\{u\}\} is the dimension of the input space, and {$d\mathbf{x}$}dxd\_\{{\textbackslash}mathbf\{x\}\} is the dimension of the system state. Notably, our lower bounds rule out the possibility of a poly(log{$T$})poly(log⁡T){\textbackslash}mathrm\{poly\}({\textbackslash}log\{T\})-regret algorithm, which had been conjectured due to the apparent strong convexity of the problem. Our upper bound is attained by a simple variant of certainty equivalent control, where the learner selects control inputs according to the optimal controller for their estimate of the system while injecting exploratory random noise. While this approach was shown to achieve {$T$}--{\textsurd}T{\textbackslash}sqrt\{T\} regret by Mania et al. (2019), we show that if the learner continually refines their estimates of the system matrices, the method attains optimal dimension dependence as well. Central to our upper and lower bounds is a new approach for controlling perturbations of Riccati equations called the self-bounding ODE method, which we use to derive suboptimality bounds for the certainty equivalent controller synthesized from estimated system dynamics. This in turn enables regret upper bounds which hold for any stabilizable instance and scale with natural control-theoretic quantities.},
+  abstract = {We consider the problem of online adaptive control of the linear quadratic regulator, where the true system parameters are unknown. We prove new upper and lower bounds demonstrating that the optimal regret scales as {\~}({$d$}2{$\mathbf{u}d\mathbf{x}T$}------{\textsurd}){$\Theta$}{\textasciitilde}(du2dxT){\textbackslash}tilde\{{\textbackslash}Theta\} ({\textbackslash}sqrt\{d\_\{{\textbackslash}mathbf\{u\}\}{\textasciicircum}2 d\_\{{\textbackslash}mathbf\{x\}\} T\}), where {$T$}TT is the number of time steps, {$d\mathbf{u}$}dud\_\{{\textbackslash}mathbf\{u\}\} is the dimension of the input space, and {$d\mathbf{x}$}dxd\_\{{\textbackslash}mathbf\{x\}\} is the dimension of the system state. Notably, our lower bounds rule out the possibility of a poly(log{$T$})poly(log⁡T){\textbackslash}mathrm\{poly\}({\textbackslash}log\{T\})-regret algorithm, which had been conjectured due to the apparent strong convexity of the problem. Our upper bound is attained by a simple variant of certainty equivalent control, where the learner selects control inputs according to the optimal controller for their estimate of the system while injecting exploratory random noise. While this approach was shown to achieve {$T$}--{\textsurd}T{\textbackslash}sqrt\{T\} regret by Mania et al. (2019), we show that if the learner continually refines their estimates of the system matrices, the method attains optimal dimension dependence as well. Central to our upper and lower bounds is a new approach for controlling perturbations of Riccati equations called the self-bounding ODE method, which we use to derive suboptimality bounds for the certainty equivalent controller synthesized from estimated system dynamics. This in turn enables regret upper bounds which hold for any stabilizable instance and scale with natural control-theoretic quantities.},
   langid = {english},
   file = {/Users/sushin/Zotero/storage/KXHH73ZR/Simchowitz and Foster - 2020 - Naive Exploration is Optimal for Online LQR.pdf;/Users/sushin/Zotero/storage/PBWEIYP4/Simchowitz and Foster - 2020 - Naive Exploration is Optimal for Online LQR.pdf}
 }

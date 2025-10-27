@@ -218,13 +218,17 @@
   \item \alert{Factorization-free methods} have been the dominant approach:
     \begin{itemize}
     \item PDLP: first-order method for LPs \citep{applegatePracticalLargeScaleLinear2022,luCuPDLPFurtherEnhanced2025}
-    \item {PCG}-based algorithms for convex QPs \citep{schubigerGPUAccelerationADMM2020}
+    \item {PCG} within ADMM for convex QPs \citep{schubigerGPUAccelerationADMM2020}
     \item ALM + IPM + PCG for nonlinear problems \citep{caoAugmentedLagrangianInteriorpoint2016}
     \end{itemize}
   \item<2-> These methods rely solely on \alert{GPU-friendly kernels}---\alert{\texttt{spmv}, \texttt{axpy}, \texttt{map}, \texttt{mapreduce}}---facilitating implementation on GPUs
   \item<3-> They scale to extremely large problems, but achieving high precision remains challenging
-  \item<4-> Is it possible to implement \alert{second-order methods} using \alert{sparse direct solvers} on GPUs?
   \end{itemize}
+  \visible<4->{
+    \begin{center}
+      \it Can we implement solvers based on \alert{second-order methods} and \alert{direct linear algebra} on GPUs?
+    \end{center}
+  }
   \refbr{
     \fullcite{applegatePracticalLargeScaleLinear2022}\\
     \fullcite{luCuPDLPFurtherEnhanced2025}\\
@@ -238,29 +242,29 @@
 % ---------------------------
 \begin{frame}{Our problem setting}{Large-scale, sparse, constrained nonlinear programs}
   \begin{itemize}
-  \item \only<1-4>{
+  \item \only<1>{
       We consider:
       \begin{align*}
         \min_{x^\flat\leq x \leq x^\sharp}&\; f(x) \\
         \text{s.t.}&\; g^\flat\leq g(x)\leq g^\sharp,
       \end{align*}
     }
-    \only<5->{
+    \only<2->{
       WLOG (via $a=b \iff a \geq b,\; b\geq a$), we consider:
       \begin{align*}
         \min_{x\in\mathbb{R}^n}&\; f(x) \\
         \text{s.t.}&\; g(x)\geq 0,
       \end{align*}
     }
-    \visible<2->... but will particularly focus on:
+    \visible<3->{... but will particularly focus on:}
     \begin{itemize}
-    \item<2-> $f:\mathbb{R}^n\to\mathbb{R}$ and $g:\mathbb{R}^n\to\mathbb{R}^m$ twice continuously differentiable
-    \item<3-> $n$ and $m$ are large (millions or more)
-    \item<4-> $\nabla g(x)$ and $\nabla^2_{xx} L(x,\lambda)$ are \alert{sparse} (tens of nonzeros per row)---$L(\cdot,\cdot)$ is the Lagrangian
+    \item<3-> $f:\mathbb{R}^n\to\mathbb{R}$ and $g:\mathbb{R}^n\to\mathbb{R}^m$ twice continuously differentiable
+    \item<4-> Generally \alert{nonconvex}---we only seek \alert{local solutions}
+    \item<5-> $n$ and $m$ are large (millions or more)
+    \item<6-> $\nabla g(x)$ and $\nabla^2_{xx} L(x,\lambda)$ are \alert{sparse} (tens of nonzeros per row)---$L(\cdot,\cdot)$ is the Lagrangian
     \end{itemize}
-  \item<6-> Generally \alert{nonconvex}---we only seek \alert{local solutions}
-  \item<7-> Most important instances (e.g., energy systems, optimal control) fall into this category
-  \item<8-> Most existing solvers (e.g., Ipopt, KNITRO) are optimized for such problems
+  \item<7-> Most existing solvers (e.g., Ipopt, KNITRO) are optimized for such problems
+  \item<8-> Most important instances (e.g., energy systems, optimal control) fall into this category
   \end{itemize}
 \end{frame}
 
@@ -294,7 +298,7 @@
   \item<2-> \alert{Algebraic modeling systems} (e.g., JuMP, AMPL, CasADi) generate \alert{callback functions---$f(\cdot)$, $g(\cdot)$, $\nabla f(\cdot)$, $\nabla g(\cdot)$, $\nabla^2_{xx} L(\cdot,\cdot)$}---for \alert{NLP solvers}
   \item<3-> \alert{NLP solvers} (e.g., Ipopt, KNITRO) form \alert{KKT systems} to find step direction:
   \kktsystem
-    where $s$ is slack; $S=\text{diag}(s)$; $\Lambda=\text{diag}(\lambda)$; and $\delta_p,\delta_d$ are regularization parameters
+    where $s$ is slack; $S=\text{diag}(s)$; $\Lambda=\text{diag}(\lambda)$; and $\delta_p,\delta_d\geq 0$ are regularization parameters
   \item<4-> \alert{Sparse, direct linear solvers} (e.g., MA27, PARDISO) factorize and solve KKT systems; iterative method is typically not an option due to \alert{ill-conditioning}
   \end{itemize}
 \end{frame}
@@ -321,7 +325,7 @@
 % ---------------------------
 
 \begin{frame}{Linear algebra within IPM (on CPUs)}
-  \begin{block}{LBL$^\top$ factorization}
+  \begin{block}{LBL$^\top$ factorization \citep{duffMultifrontalSolutionIndefinite1983}}
     \vspace{-1em}
     \begin{align*}
       \begin{bmatrix}
@@ -335,12 +339,13 @@
   \end{block}
   \begin{itemize}
   \item<2-> ${\color{blue}P}$: Fill-in-reducing (and parallel-friendly) re-ordering (re-used across IPM iterations)
-  \item<3-> ${\color{red}Q}$: Pivoting (computed on-the-fly during factorization) \visible<7>{\textcolor{red}{$\longleftarrow$ this is the main pain point}}
+  \item<3-> ${\color{red}Q}$: Numerical pivoting (computed on-the-fly during factorization) \visible<7>{\textcolor{red}{$\longleftarrow$ main pain point}}
   \item<4-> ${\color{ForestGreen}LBL^\top}$: Factorization of permuted matrix
   \item<5-> Additionally, pivots may be \alert{perturbed}, which must be corrected via \alert{iterative refinement}
   \item<6-> \alert{Factorization reveals inertia}---number of $+$, $0$, and $-$ eigenvalues; {primal-dual regularization {\color{magenta}$(\delta_p,\delta_d)$} is adjusted} to achieve correct inertia \citep{wachterImplementationInteriorpointFilter2006}
   \end{itemize}
   \refbr{
+    \fullcite{duffMultifrontalSolutionIndefinite1983}\\ 
     \fullcite{wachterImplementationInteriorpointFilter2006}\\
     \fullcite{nocedalNumericalOptimization2006}
   }
@@ -348,19 +353,19 @@
 
 \begin{frame}{Pivoting-free IPM}{\cite{montoisonGPUImplementationSecondOrder2025}}
   \begin{itemize}
-  \item Numerical pivoting is \alert{difficult} to implement on GPUs \citep{swirydowiczLinearSolversPower2022} because row swapping may \alert{affect fill-ins} and \alert{destroy parallelism}
-  \item<2-> Existing GPU solvers (e.g., cuDSS) \alert{don't have adequately robust pivoting strategies}; currently only have partial pivoting and pivot perturbation
-  \item<3-> Factorization may fail without \alert{numerical pivoting}, unless
+  \item Numerical pivoting is \alert{difficult} to implement on GPUs because it may \alert{incur irregular memory access} and \alert{destroy parallelism} \citep{swirydowiczLinearSolversPower2022}
+  \item<2-> Existing GPU solvers (e.g., cuDSS) \alert{don't have adequately robust pivoting strategies}
+  \item<3-> When pivoting is not required, \alert{GPU sparse direct solvers can be very efficient}
+  \item<4-> Factorization may fail without \alert{numerical pivoting}, unless
     \begin{itemize}
     \item \alert{Symmetric quasi-definite} (SQD): factorization exists \citep{vanderbeiSymmetricQuasidefiniteMatrices1995} 
     \item \alert{Symmetric positive definite} (SPD): factorization exists and numerically stable
     \end{itemize}
-  % \item When pivoting is not required, \alert{GPU sparse direct solvers can be very efficient}
   \end{itemize}
   \begin{center}
     \it
-    \only<4>{\alert{Can we make IPM pivoting-free?}}
-    \only<5->{(For now) can we reformulate KKT systems to be SPD or SQD?}
+    \visible<5->{\alert{Can we make IPM pivoting-free?}}\\
+    \visible<6->{(For now) can we reformulate KKT systems to be SPD or SQD?}
   \end{center}
   \refbr{
     \fullcite{montoisonGPUImplementationSecondOrder2025}\\
@@ -372,12 +377,16 @@
 % ---------------------------
 \section{Option 1: Lifted KKT}
 % ---------------------------
-\begin{frame}{Option 0: Vanila IPM + CuDSS?}
+\begin{frame}{Option 0 (?): Vanila IPM + cuDSS}
   \begin{itemize}
-  \item With MadNLP v0.8.12 + CuDSS v0.7.1, convergence is typically OK with small problems ($<10k$ variables), but \alert{fails frequently with larger problems} ($>10k$ variables)
-  \item Linear solver relies on \alert{pivot perturbation} $\Rightarrow$ poor factorization accuracy $\Rightarrow$ iterative refinement failure $\Rightarrow$ \alert{forced primal-dual regularization} $\Rightarrow$ \alert{slow convergence or failure}
-  \item As of now, this is \alert{not a viable option}
+  \item With MadNLP v0.8.12 + cuDSS v0.7.1, convergence is typically OK with small problems ($<10k$ variables), but \alert{fails frequently with larger problems} ($>10k$ variables)
+  \item<2-> Linear solver relies on \alert{pivot perturbation} $\Rightarrow$ poor factorization accuracy $\Rightarrow$ iterative refinement failure $\Rightarrow$ \alert{forced primal-dual regularization} $\Rightarrow$ \alert{slow convergence or failure}
   \end{itemize}
+  \begin{center}
+    \visible<3>{
+      As of now, using GPU direct solver with vanila IPM solver is \alert{not a viable option}
+      }
+  \end{center}
 \end{frame}
 
 \begin{frame}{Option 1: Lifted KKT method}{\cite{shinAcceleratingOptimalPower2024}}
