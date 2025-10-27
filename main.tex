@@ -339,56 +339,71 @@
   \end{block}
   \begin{itemize}
   \item<2-> ${\color{blue}P}$: Fill-in-reducing (and parallel-friendly) re-ordering (re-used across IPM iterations)
-  \item<3-> ${\color{red}Q}$: Numerical pivoting (computed on-the-fly during factorization) \visible<7>{\textcolor{red}{$\longleftarrow$ main pain point}}
+  \item<3-> ${\color{red}Q}$: Numerical pivoting (computed on-the-fly during factorization) \visible<5>{\textcolor{red}{$\longleftarrow$ main pain point}}
   \item<4-> ${\color{ForestGreen}LBL^\top}$: Factorization of permuted matrix (triangular, almost-diagonal)
-  \item<5-> Additionally, pivots may be \alert{perturbed}, which must be corrected via \alert{iterative refinement}
-  \item<6-> \alert{Factorization reveals inertia}---number of $+$, $0$, and $-$ eigenvalues; {primal-dual regularization {\color{magenta}$(\delta_p,\delta_d)$} is adjusted} to achieve correct inertia \citep{wachterImplementationInteriorpointFilter2006}
+  % \item<5-> Additionally, pivots may be \alert{perturbed}, which must be corrected via \alert{iterative refinement}
+  % \item<6-> \alert{Factorization reveals inertia}---number of $+$, $0$, and $-$ eigenvalues; {primal-dual regularization {\color{magenta}$(\delta_p,\delta_d)$} is adjusted} to achieve correct inertia \citep{wachterImplementationInteriorpointFilter2006}
   \end{itemize}
   \refbr{
     \fullcite{duffMultifrontalSolutionIndefinite1983}\\ 
-    \fullcite{wachterImplementationInteriorpointFilter2006}\\
-    \fullcite{nocedalNumericalOptimization2006}
+    \fullcite{wachterImplementationInteriorpointFilter2006}
+    % \\
+    % \fullcite{nocedalNumericalOptimization2006}
+  }
+\end{frame}
+
+\begin{frame}{Numerical pivoting on GPU is challenging}
+  \begin{itemize}
+  \item Numerical pivoting is \alert{difficult} to implement on GPUs because it may \alert{incur irregular memory access} and \alert{destroy parallelism} \citep{swirydowiczLinearSolversPower2022}
+  \item<2-> Existing GPU solvers (e.g., cuDSS) \alert{don't have adequately robust pivoting strategies}
+  \item<3-> Vanilla IPM + cuDSS v0.7.1---\alert{frequent failures for larger problems} ($>10k$ variables)
+  \item<4-> Linear solver relies on \alert{pivot perturbation} $\Rightarrow$ poor factorization accuracy $\Rightarrow$ iterative refinement failure $\Rightarrow$ \alert{forced primal-dual regularization} $\Rightarrow$ \alert{slow convergence or failure}
+  \end{itemize}
+  % \begin{center}
+  %   \it
+  %   \visible<5->{\alert{Can we make IPM pivoting-free?}}\\
+  % \end{center}
+  \refbr{
+    % \fullcite{montoisonGPUImplementationSecondOrder2025}\\
+    \fullcite{swirydowiczLinearSolversPower2022}
   }
 \end{frame}
 
 \begin{frame}{Pivoting-free IPM}{\cite{montoisonGPUImplementationSecondOrder2025}}
   \begin{itemize}
-  \item Numerical pivoting is \alert{difficult} to implement on GPUs because it may \alert{incur irregular memory access} and \alert{destroy parallelism} \citep{swirydowiczLinearSolversPower2022}
-  \item<2-> Existing GPU solvers (e.g., cuDSS) \alert{don't have adequately robust pivoting strategies}
-  \item<3-> However, when pivoting is not required, \alert{GPU solvers (e.g., cuDSS) can be very efficient}
-  \item<4-> Factorization may fail without \alert{numerical pivoting}, unless
+    \item KKT systemes can be factorized without \alert{numerical pivoting} if
     \begin{itemize}
     \item \alert{Symmetric quasi-definite} (SQD): factorization exists \citep{vanderbeiSymmetricQuasidefiniteMatrices1995} 
     \item \alert{Symmetric positive definite} (SPD): factorization exists and numerically stable
     \end{itemize}
+  \item<2-> When pivoting is not required, \alert{GPU solvers (e.g., cuDSS) can be very efficient}
   \end{itemize}
   \begin{center}
     \it
-    \visible<5->{\alert{Can we make IPM pivoting-free?}}\\
-    \visible<6->{(For now) can we reformulate KKT systems to be SPD or SQD?}
+    \visible<3->{(For now) can we reformulate KKT systems to be SPD or SQD?}
   \end{center}
   \refbr{
     \fullcite{montoisonGPUImplementationSecondOrder2025}\\
-    \fullcite{vanderbeiSymmetricQuasidefiniteMatrices1995}\\
-    \fullcite{swirydowiczLinearSolversPower2022}
+    \fullcite{vanderbeiSymmetricQuasidefiniteMatrices1995}
+    % \fullcite{swirydowiczLinearSolversPower2022}
   }
 \end{frame}
 
-% ---------------------------
-\section{Option 1: Lifted KKT}
-% ---------------------------
-\begin{frame}{Option 0 (?): Vanila IPM + cuDSS}
-  \begin{itemize}
-  \item With MadNLP v0.8.12 + cuDSS v0.7.1, convergence is typically OK with small problems ($<10k$ variables), but \alert{fails frequently with larger problems} ($>10k$ variables)
-  \item<2-> Linear solver relies on \alert{pivot perturbation} $\Rightarrow$ poor factorization accuracy $\Rightarrow$ iterative refinement failure $\Rightarrow$ \alert{forced primal-dual regularization} $\Rightarrow$ \alert{slow convergence or failure}
-  \end{itemize}
-  \medskip
-  \begin{center}
-    \visible<3>{
-      As of now, using GPU direct solver with vanila IPM solver is \alert{not a viable option}
-      }
-  \end{center}
-\end{frame}
+% % ---------------------------
+% \section{Option 1: Lifted KKT}
+% % ---------------------------
+% \begin{frame}{Option 0 (?): Vanila IPM + cuDSS}
+%   \begin{itemize}
+%   \item With MadNLP v0.8.12 + cuDSS v0.7.1, convergence is typically OK with small problems ($<10k$ variables), but \alert{fails frequently with larger problems} ($>10k$ variables)
+%   \item<2-> Linear solver relies on \alert{pivot perturbation} $\Rightarrow$ poor factorization accuracy $\Rightarrow$ iterative refinement failure $\Rightarrow$ \alert{forced primal-dual regularization} $\Rightarrow$ \alert{slow convergence or failure}
+%   \end{itemize}
+%   \medskip
+%   \begin{center}
+%     \visible<3>{
+%       As of now, using GPU direct solver with vanila IPM solver is \alert{not a viable option}
+%       }
+%   \end{center}
+% \end{frame}
 
 \begin{frame}{Option 1: Lifted KKT method}{\cite{shinAcceleratingOptimalPower2024}}
 \begin{itemize}
@@ -555,8 +570,8 @@
 \begin{frame}{Options 3, 4, 5, ...}
   \begin{itemize}
   \item There can be lots of other ways to implement pivoting-free solvers
-  \item<2-> \alert{MadIPM}: Solver for convex quadratic programs; uses regularization to avoid pivoting \citep{montoisonGPUImplementationSecondOrder2025}
-  \item<3-> \alert{MadNCL}: ALM-based algorithm---ALM is more \alert{GPU-friendly} due to the quadratic penalty term. Uses nonlinearly-constrained Lagrangian (NCL) formulation and applies condensation techniques \citep{montoisonMadNCLGPUImplementation2025}
+  \item<2-> \alert{MadNCL}: ALM-based algorithm---ALM is more \alert{GPU-friendly} due to the quadratic penalty term. Uses nonlinearly-constrained Lagrangian (NCL) formulation and applies condensation techniques \citep{montoisonMadNCLGPUImplementation2025}
+  \item<3-> \alert{MadIPM}: Solver for convex quadratic programs; uses regularization to avoid pivoting \citep{montoisonGPUImplementationSecondOrder2025}
   \item<4-> Directly solving augmented systems without pivoting? ---currently under investigation
   \end{itemize}
   \refbr{
