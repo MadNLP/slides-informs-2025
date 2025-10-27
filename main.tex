@@ -325,7 +325,7 @@
 % ---------------------------
 
 \begin{frame}{Linear algebra within IPM (on CPUs)}
-  \begin{block}{LBL$^\top$ factorization \citep{duffMultifrontalSolutionIndefinite1983}}
+  \begin{block}{Sparse LBL$^\top$ factorization \citep{duffMultifrontalSolutionIndefinite1983}}
     \vspace{-1em}
     \begin{align*}
       \begin{bmatrix}
@@ -340,7 +340,7 @@
   \begin{itemize}
   \item<2-> ${\color{blue}P}$: Fill-in-reducing (and parallel-friendly) re-ordering (re-used across IPM iterations)
   \item<3-> ${\color{red}Q}$: Numerical pivoting (computed on-the-fly during factorization) \visible<7>{\textcolor{red}{$\longleftarrow$ main pain point}}
-  \item<4-> ${\color{ForestGreen}LBL^\top}$: Factorization of permuted matrix
+  \item<4-> ${\color{ForestGreen}LBL^\top}$: Factorization of permuted matrix (triangular, almost-diagonal)
   \item<5-> Additionally, pivots may be \alert{perturbed}, which must be corrected via \alert{iterative refinement}
   \item<6-> \alert{Factorization reveals inertia}---number of $+$, $0$, and $-$ eigenvalues; {primal-dual regularization {\color{magenta}$(\delta_p,\delta_d)$} is adjusted} to achieve correct inertia \citep{wachterImplementationInteriorpointFilter2006}
   \end{itemize}
@@ -355,7 +355,7 @@
   \begin{itemize}
   \item Numerical pivoting is \alert{difficult} to implement on GPUs because it may \alert{incur irregular memory access} and \alert{destroy parallelism} \citep{swirydowiczLinearSolversPower2022}
   \item<2-> Existing GPU solvers (e.g., cuDSS) \alert{don't have adequately robust pivoting strategies}
-  \item<3-> When pivoting is not required, \alert{GPU sparse direct solvers can be very efficient}
+  \item<3-> However, when pivoting is not required, \alert{GPU solvers (e.g., cuDSS) can be very efficient}
   \item<4-> Factorization may fail without \alert{numerical pivoting}, unless
     \begin{itemize}
     \item \alert{Symmetric quasi-definite} (SQD): factorization exists \citep{vanderbeiSymmetricQuasidefiniteMatrices1995} 
@@ -382,6 +382,7 @@
   \item With MadNLP v0.8.12 + cuDSS v0.7.1, convergence is typically OK with small problems ($<10k$ variables), but \alert{fails frequently with larger problems} ($>10k$ variables)
   \item<2-> Linear solver relies on \alert{pivot perturbation} $\Rightarrow$ poor factorization accuracy $\Rightarrow$ iterative refinement failure $\Rightarrow$ \alert{forced primal-dual regularization} $\Rightarrow$ \alert{slow convergence or failure}
   \end{itemize}
+  \medskip
   \begin{center}
     \visible<3>{
       As of now, using GPU direct solver with vanila IPM solver is \alert{not a viable option}
@@ -396,28 +397,39 @@
     h(x)=0\quad \Longrightarrow \quad h(x) + s = 0 \quad\text{ and }\quad -\tau \leq s \leq\tau
   \end{align*}
 \item<2-> \alert{Condense} the KKT system by eliminating slack/dual variables:
-  \begin{align*}
-    &\begin{bmatrix}
-      \nabla^2_{x x} L(x,s,\lambda) + \delta_p I & & \nabla g(x)^\top
-      \\ & S^{-1}\Lambda &  -I
-      \\ \nabla g(x) & -I &  - \delta_d I
-    \end{bmatrix}
-      \begin{bmatrix}
-        \phantom{-}d_x \\
-        \phantom{-}d_s \\
-        -d_\lambda
-      \end{bmatrix}
-      =      
-      -\begin{bmatrix}
-        \nabla f(x) - \nabla g(x)^\top \lambda\\
-        \Lambda e - \mu S^{-1}e \\
-        g(x) - s\\
-      \end{bmatrix}
-    \\
-    &\iff
-    \Big(\underbrace{\nabla^2_{xx} L(x,s,\lambda) + \delta_p I + \nabla g(x)^\top (\delta_d I + \Lambda^{-1} S)^{-1} \nabla g(x) }_{\text{\alert{SPD iff the original system has correct inertia}}}\Big) d_x = - r_p 
-  \end{align*}
-\item<3-> Enables numerically stable factorization \alert{without pivoting or excessive regularization}
+  \begin{tikzpicture}
+    \node[text width=\textwidth] at (0,0) {
+      \begin{align*}
+        &\begin{bmatrix}
+          \nabla^2_{x x} L(x,s,\lambda) + \delta_p I & & \nabla g(x)^\top
+          \\ & S^{-1}\Lambda &  -I
+          \\ \nabla g(x) & -I &  - \delta_d I
+        \end{bmatrix}
+          \begin{bmatrix}
+            \phantom{-}d_x \\
+            \phantom{-}d_s \\
+            -d_\lambda
+          \end{bmatrix}
+          =      
+          -\begin{bmatrix}
+            \nabla f(x) - \nabla g(x)^\top \lambda\\
+            \Lambda e - \mu S^{-1}e \\
+            g(x) - s\\
+          \end{bmatrix}
+        \\
+        &
+          \visible<4->{
+          \iff
+          \Big(\underbrace{\nabla^2_{xx} L(x,s,\lambda) + \delta_p I + \nabla g(x)^\top (\delta_d I + \Lambda^{-1} S)^{-1} \nabla g(x) }_{\text{\alert{SPD iff the original system has correct inertia}}}\Big) d_x = - r_p
+          }
+      \end{align*}
+    };
+    \visible<3>{
+      \node[rounded corners,minimum width=80,minimum height=30,red,fill,opacity=.15] (shade) at (-1.15,.25) {};
+      \node[align=center,anchor=north,font=\small,red] at (shade.south) {structurally non-singular}; 
+    }
+  \end{tikzpicture}
+\item<5-> Enables numerically stable factorization \alert{without pivoting or excessive regularization}
 \end{itemize}
 \refbr{
   \fullcite{shinAcceleratingOptimalPower2024}
@@ -547,27 +559,42 @@
   \item<3-> \alert{MadNCL}: ALM-based algorithm---ALM is more \alert{GPU-friendly} due to the quadratic penalty term. Uses nonlinearly-constrained Lagrangian (NCL) formulation and applies condensation techniques \citep{montoisonMadNCLGPUImplementation2025}
   \item<4-> Directly solving augmented systems without pivoting? ---currently under investigation
   \end{itemize}
+  \refbr{
+    \fullcite{montoisonGPUImplementationSecondOrder2025}\\
+    \fullcite{montoisonMadNCLGPUImplementation2025}
+  }
 \end{frame}
 
 % ---------------------------
 \section{Conclusion}
 % ---------------------------
 \begin{frame}{Concluding remarks}
-  \begin{center}
-    Check out our project page!\\
-    \url{https://madsuite.org/}
-  \end{center}
+  \begin{columns}
+    \begin{column}{.5\textwidth}
+      \begin{center}
+        Check out our project page!\\
+        \url{https://madsuite.org/}
+      \end{center}
+    \end{column}
+    \begin{column}{.5\textwidth}
+      \begin{center}
+        This slide deck:\\
+        \url{https://tinyurl.com/5n7nryx5}
+      \end{center}
+    \end{column}
+  \end{columns}
+  \vspace{2em}
   \begin{itemize}
-  \item It is an exciting time to develop optimization solvers!
-  \item<2-> With \alert{GPU direct solvers}, \alert{second-order methods} on GPUs has now become possible
-  \item<3-> To harness these GPU direct solvers, we need \alert{pivoting-free algorithms}
-  \item<4-> Existing GPU solvers have focused on \alert{factorization-free} (e.g. first-order) methods, but
+  % \item It is an exciting time to develop optimization solvers!
+  % \item<2-> With \alert{GPU direct solvers}, \alert{second-order methods} on GPUs has now become possible
+  % \item<3-> To harness these GPU direct solvers, we need \alert{pivoting-free algorithms}
+  \item Existing GPU solvers have focused on \alert{factorization-free} (e.g. first-order) methods, but
       \begin{align*}
         \text{GPU optimization solvers}
         &\supsetneq \text{Factorization-free solvers}\\
-        &\visible<5->{\supset\text{Factorization-baesd, but \alert{pivoting-free} solvers}}
+        &\visible<2->{\supset\text{Factorization-baesd, but \alert{pivoting-free} solvers}}
       \end{align*}
-  \item<6-> We presented \alert{Lifted KKT} and \alert{Hybrid KKT}, but there can be many others
+    \item<3-> We presented \alert{Lifted KKT} and \alert{Hybrid KKT}, but there can be many others
   \end{itemize}
 \end{frame}
 
